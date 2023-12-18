@@ -1,0 +1,110 @@
+# translation of msmtp.po to swedish
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+#
+# Martin Bagge <brother@bsnet.se>, 2008.
+msgid ""
+msgstr ""
+"Project-Id-Version: msmtp\n"
+"Report-Msgid-Bugs-To: msmtp@packages.debian.org\n"
+"POT-Creation-Date: 2022-10-27 23:33+0000\n"
+"PO-Revision-Date: 2008-11-22 20:41+0100\n"
+"Last-Translator: Martin Bagge <brother@bsnet.se>\n"
+"Language-Team: swedish <debian-l10n-swedish@lists.debian.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: KBabel 1.11.4\n"
+
+#. Type: boolean
+#. Description
+#: ../msmtp.templates:1001
+msgid "Enable AppArmor support?"
+msgstr ""
+
+#. Type: boolean
+#. Description
+#: ../msmtp.templates:1001
+msgid ""
+" Apparmor is a kernel security mechanism to restrict programs capabilities\n"
+" with per-program profiles.\n"
+" .\n"
+" The AppArmor profile for msmtp covers a lot of common usecases but there "
+"are\n"
+" still corner cases with some options which breaks msmtp with "
+"incomprehensible\n"
+" permissions denied errors."
+msgstr ""
+
+#. Type: error
+#. Description
+#: ../msmtp.templates:2001
+msgid "Remove SetGID bit on msmtp"
+msgstr ""
+
+#. Type: error
+#. Description
+#: ../msmtp.templates:2001
+msgid ""
+" Starting from version 1.8.22, msmtp will no longer be SetGID. Hence the\n"
+" creation of the system-wide configuration (/etc/msmtprc) using debconf is\n"
+" removed.\n"
+" .\n"
+" From one side, using the system wide configuration implied msmtp to be "
+"SetGID\n"
+" but recent security hardening changes in GLib prevent SetGID binaries "
+"built\n"
+" against libsecret to talk to the D-Bus session, and therefore prevent it "
+"from\n"
+" being able to retrieve passwords from gnome-keyring or KWallet.\n"
+" .\n"
+" On another side, it was easy for a local user to obtain the credentials\n"
+" stored in /etc/msmtprc even if the file was not readable for this user "
+"when\n"
+" msmtp was SetGid.\n"
+" .\n"
+" More information in the following bug reports:\n"
+"   - https://bugs.debian.org/944188\n"
+"   - https://bugs.debian.org/995012"
+msgstr ""
+
+#~ msgid "Create a system wide configuration file?"
+#~ msgstr "Ska en global inställningsfil för systemet skapas?"
+
+#~ msgid ""
+#~ "msmtp has a sendmail emulation mode which allow to create a default "
+#~ "system account that can be used by any user."
+#~ msgstr ""
+#~ "msmtp har ett läge som innebär att sendmail emuleras, detta innebär att "
+#~ "systemkonto skapas som kan användas av alla systemets användare."
+
+#~ msgid "SMTP server hostname:"
+#~ msgstr "Värdnamn för SMTP-server:"
+
+#~ msgid "SMTP port number:"
+#~ msgstr "Portnummer för SMTP:"
+
+#~ msgid "Generate an envelope-from address?"
+#~ msgstr "Ska en envelope-from-adress skapas?"
+
+#~ msgid ""
+#~ "msmtp can generate an envelope-from address based on the login name and "
+#~ "the \"maildomain\" configuration variable."
+#~ msgstr ""
+#~ "msmtp kan skapa en envelope-from-adress som baseras på inloggningsnamnet "
+#~ "och \"e-post-domänen\" från inställningarna."
+
+#~ msgid "Domain to use for the envelope-from address:"
+#~ msgstr "Domän som ska användas för envelope-from-adressen:"
+
+#~ msgid "Use TLS to encrypt connection?"
+#~ msgstr "Ska TLS användas för att kryptera anslutningen?"
+
+#~ msgid ""
+#~ "Connection to remote hosts can be encrypted using TLS. This option should "
+#~ "be enabled if the remote server supports such connections."
+#~ msgstr ""
+#~ "Anslutningar till fjärrsystem kan ske krypterat genom att använda TLS. "
+#~ "Detta alternativ ska vara aktiverat om fjärrsystemet har stöd för sådana "
+#~ "anslutningar."

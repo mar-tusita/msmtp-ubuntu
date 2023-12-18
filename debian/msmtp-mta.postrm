@@ -1,0 +1,17 @@
+#!/bin/sh
+
+set -e
+
+case $1 in
+    purge)
+        if getent passwd msmtp >/dev/null; then
+            if command -v deluser >/dev/null; then
+                deluser --quiet msmtp >/dev/null
+            fi
+        fi
+        ;;
+    *)
+        ;;
+esac
+
+#DEBHELPER#

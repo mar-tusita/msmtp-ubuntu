@@ -1,0 +1,30 @@
+Template: msmtp/apparmor
+Type: boolean
+Default: false
+_Description: Enable AppArmor support?
+  Apparmor is a kernel security mechanism to restrict programs capabilities
+  with per-program profiles.
+  .
+  The AppArmor profile for msmtp covers a lot of common usecases but there are
+  still corner cases with some options which breaks msmtp with incomprehensible
+  permissions denied errors.
+
+Template: msmtp/security-information
+Type: error
+_Description: Remove SetGID bit on msmtp
+  Starting from version 1.8.22, msmtp will no longer be SetGID. Hence the
+  creation of the system-wide configuration (/etc/msmtprc) using debconf is
+  removed.
+  .
+  From one side, using the system wide configuration implied msmtp to be SetGID
+  but recent security hardening changes in GLib prevent SetGID binaries built
+  against libsecret to talk to the D-Bus session, and therefore prevent it from
+  being able to retrieve passwords from gnome-keyring or KWallet.
+  .
+  On another side, it was easy for a local user to obtain the credentials
+  stored in /etc/msmtprc even if the file was not readable for this user when
+  msmtp was SetGid.
+  .
+  More information in the following bug reports:
+    - https://bugs.debian.org/944188
+    - https://bugs.debian.org/995012

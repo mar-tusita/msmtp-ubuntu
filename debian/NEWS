@@ -1,0 +1,56 @@
+msmtp (1.8.22-1) unstable; urgency=medium
+
+    Starting from version 1.8.22, msmtp will no longer be SetGID. Hence the
+    creation of the system-wide configuration (/etc/msmtprc) using debconf is
+    removed.
+
+    From one side, using the system-wide configuration implied msmtp to be SetGID
+    but recent security hardening changes in GLib prevent SetGID binaries built
+    against libsecret to talk to the D-Bus session, and therefore prevent it from
+    being able to retrieve passwords from gnome-keyring or KWallet.
+
+    On another side, it was easy for a local user to obtain the credentials
+    stored in /etc/msmtprc even if the file was not readable for this user
+    when msmtp was SetGID.
+
+    More information in the following bug reports:
+        - https://bugs.debian.org/944188
+        - https://bugs.debian.org/995012
+
+    Scripts (msmtpq and msmtpqueue) are now installed in /usr/libexec/msmtp
+    instead of /usr/share/doc/msmtp/examples previously.
+
+ -- Emmanuel Bouthenot <kolter@debian.org>  Tue, 25 Oct 2022 21:49:01 +0000
+
+msmtp (1.8.3-1) unstable; urgency=medium
+
+    The system-wide configuration file (/etc/msmtprc) can contain SMTP credentials
+    that are best kept secret. To let regular users use msmtp while preventing them
+    from reading the file, the permissions can be adjusted that way:
+
+    # chmod 0640 /etc/msmtprc
+    # chgrp msmtp /etc/msmtprc
+
+    So that msmtp's binary executing as the "msmtp" group (setgid) can access it.
+
+ -- Simon Deziel <simon@sdeziel.info>  Sun, 20 Jan 2019 20:41:20 -0500
+
+msmtp (1.8.2-1) unstable; urgency=medium
+
+    /usr/bin/msmtp ships with an Apparmor profile restricting what the binary
+    can access.
+    If you notice Apparmor denial logs in dmesg, please report them as bugs or
+    if they are specific to your environment, please add local rules to
+    /etc/apparmor.d/local/usr.bin.msmtp and reload the main profile with:
+
+    # apparmor_parser -r -T -W /etc/apparmor.d/usr.bin.msmtp
+
+    The usage of secret helpers for the --passwordeval option is limited to
+    gpg, gpg2, secret-tool, pass, etc. To use a different helper, edit and
+    reload the main profile (/etc/apparmor.d/usr.bin.msmtp). If you'd like
+    to disable the Apparmor profile completely:
+
+    # apparmor_parser -R /etc/apparmor.d/usr.bin.msmtp
+    # ln -s /etc/apparmor.d/usr.bin.msmtp /etc/apparmor.d/disable/
+
+ -- Emmanuel Bouthenot <kolter@debian.org>  Tue, 08 Jan 2019 04:31:46 +0000

@@ -1,0 +1,3 @@
+doc/*.example
+scripts/find_alias
+scripts/set_sendmail

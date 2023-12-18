@@ -1,0 +1,70 @@
+Scripts shipped in /usr/share/doc/msmtp/examples
+================================================
+
+The scripts shipped in /usr/share/doc/msmtp/examples are provided as is. It
+means that they did not (and will not) receive the same attention than the
+rest. They are probably in a very good shape but we suggest you to test them to
+make your proper opinion.
+
+Vim syntax for msmtp configuration files:
+=========================================
+
+This feature is shipped with the msmtp package and available through the
+Vim addons manager.
+
+To enable it as a user setting:
+ # vim-addons install msmtp
+
+To enable it as a system setting (as root):
+ # vim-addons -w install msmtp
+
+(you will need to install the package: vim-addon-manager)
+
+Once the msmtp addon is enabled, you can use it with Vim thanks to the
+following command:
+ :set filetype=msmtp
+or
+ :set ft=msmtp
+
+It you want this feature to be always enabled in Vim, you should add the
+following rules in your ~/.vimrc:
+
+  autocmd BufRead ~/.msmtprc set filetype=msmtp
+  autocmd BufRead /etc/msmtprc set filetype=msmtp
+
+Apparmor
+========
+
+/usr/bin/msmtp ships with an Apparmor profile restricting what the binary can
+access. If you notice Apparmor denial logs in dmesg, please report them as
+bugs or if they are specific to your environment, please add local rules to
+/etc/apparmor.d/local/usr.bin.msmtp and reload the main profile with:
+
+ # apparmor_parser -r -T -W /etc/apparmor.d/usr.bin.msmtp
+
+The usage of secret helpers for the --passwordeval option is limited to gpg,
+gpg2, secret-tool, pass, etc. To use a different helper, edit and reload the
+main profile (/etc/apparmor.d/usr.bin.msmtp). If you'd like to disable the
+Apparmor profile completely:
+
+ # apparmor_parser -R /etc/apparmor.d/usr.bin.msmtp
+ # ln -s /etc/apparmor.d/usr.bin.msmtp /etc/apparmor.d/disable/
+
+msmtp as a Mail Transport Agent
+===============================
+
+It is possible to use msmtp as a MTA (like postfix, exim, etc.) by installing
+the package msmtp-mta. It will provide the basic features required to be a MTA
+(/usr/{sbin,lib}/sendmail, newaliases, etc.).
+
+Even if msmtp-mta can be used as a very basic MTA, it's not (and will never be)
+a full featured one.
+
+The system-wide configuration file (/etc/msmtprc) can contain SMTP credentials
+that are best kept secret. To let regular users use msmtp while preventing them
+from reading the file, the permissions can be adjusted that way:
+
+ # chmod 0640 /etc/msmtprc
+ # chgrp msmtp /etc/msmtprc
+
+So that msmtp's binary executing as the "msmtp" group (setgid) can access it.

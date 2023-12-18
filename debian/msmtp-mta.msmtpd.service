@@ -1,0 +1,28 @@
+[Unit]
+Description=msmtp daemon
+Documentation=man:msmtpd(1)
+
+[Service]
+DynamicUser=true
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+# NoNewPrivileges prevents the setgid mechanism from working
+# so since msmtp is setgid in order to read /etc/msmtprc, the
+# msmtp group need to be added in a different way
+SupplementaryGroups=msmtp
+
+Environment=INTERFACE=127.0.0.1 PORT=25
+EnvironmentFile=-/etc/default/msmtpd
+
+Type=simple
+ExecStart=/usr/bin/msmtpd --interface=${INTERFACE} --port=${PORT}
+
+Restart=always
+RestartSec=60
+
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

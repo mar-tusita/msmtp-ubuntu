@@ -1,0 +1,63 @@
+#!/usr/bin/make -f
+
+export DEB_BUILD_MAINT_OPTIONS=hardening=+all
+
+FILES_MODIFIED_BY_BUILD = \
+	INSTALL \
+	Makefile.in \
+	aclocal.m4 \
+	build-aux/compile \
+	build-aux/depcomp \
+	build-aux/mdate-sh \
+	build-aux/missing \
+	config.h.in \
+	configure \
+	doc/Makefile.in \
+	doc/msmtp.info \
+	doc/stamp-vti \
+	doc/version.texi \
+	scripts/Makefile.in \
+	src/Makefile.in
+
+override_dh_autoreconf:
+	# Backup files modified by autoreconf
+	for file in $(FILES_MODIFIED_BY_BUILD); do \
+		if [ -e $$file ] && [ ! -e $$file.keep ] ; then \
+			cp $$file $$file.keep ; \
+		fi \
+	done
+	dh_autoreconf
+
+override_dh_auto_configure:
+	dh_auto_configure -- --with-libsecret --with-libgsasl --with-libidn --with-ssl=gnutls
+
+override_dh_auto_build:
+	pod2man --center "" --date "" --release "" --section=1 \
+		debian/newaliases.pod > debian/newaliases.1
+	dh_auto_build
+
+override_dh_auto_install:
+	dh_auto_install
+	dh_apparmor --profile-name=usr.bin.msmtp -p msmtp
+
+override_dh_installinit:
+	dh_installinit --update-rcd-params=defaults-disabled --name msmtpd
+
+override_dh_installsystemd:
+	dh_installsystemd --no-enable --name msmtpd
+
+override_dh_clean:
+	rm -f debian/newaliases.1
+	dh_clean
+	# Restore files modified by build
+	for file in $(FILES_MODIFIED_BY_BUILD); do \
+			if [ -e $$file.keep ] ; then \
+					rm -f $$file; \
+					mv $$file.keep $$file; \
+			fi \
+	done
+#	find -iname '*.gmo' -delete
+#	rm -f doc/msmtp.info doc/stamp-vti doc/version.texi po/msmtp.pot
+
+%:
+	dh $@

@@ -1,0 +1,10 @@
+debian/tmp/usr/bin/msmtp
+debian/tmp/usr/share/locale
+scripts/vim/msmtp.vim usr/share/vim/addons/syntax
+debian/msmtp.yaml usr/share/vim/registry
+debian/apparmor/usr.bin.msmtp etc/apparmor.d/
+scripts/msmtpq/msmtpq usr/libexec/msmtp/msmtpq/
+scripts/msmtpq/msmtp-queue usr/libexec/msmtp/msmtpq/
+scripts/msmtpqueue/msmtp-enqueue.sh usr/libexec/msmtp/msmtpqueue/
+scripts/msmtpqueue/msmtp-listqueue.sh usr/libexec/msmtp/msmtpqueue/
+scripts/msmtpqueue/msmtp-runqueue.sh usr/libexec/msmtp/msmtpqueue/

@@ -1,0 +1,23 @@
+#!/bin/sh
+
+set -e
+
+case $1 in
+    purge)
+        if command -v ucf >/dev/null; then
+            ucf --purge /etc/msmtprc
+        fi
+
+        rm -f /etc/msmtprc
+
+        if getent passwd msmtp >/dev/null; then
+            if command -v deluser >/dev/null; then
+                deluser --quiet msmtp >/dev/null
+            fi
+        fi
+        ;;
+    *)
+        ;;
+esac
+
+#DEBHELPER#

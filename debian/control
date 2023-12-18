@@ -1,0 +1,60 @@
+Source: msmtp
+Section: mail
+Priority: optional
+Maintainer: Ubuntu Developers <ubuntu-devel-discuss@lists.ubuntu.com>
+XSBC-Original-Maintainer: Emmanuel Bouthenot <kolter@debian.org>
+Build-Depends:
+    debhelper (>= 13),
+    debhelper-compat (= 13),
+    dh-apparmor,
+    libgnutls28-dev,
+    libgsasl-dev,
+    libkrb5-dev,
+    libsecret-1-dev,
+    po-debconf,
+    texinfo
+Rules-Requires-Root: no
+Standards-Version: 4.6.2
+Homepage: https://marlam.de/msmtp/
+Vcs-Git: https://salsa.debian.org/kolter/msmtp.git
+Vcs-Browser: https://salsa.debian.org/kolter/msmtp
+
+Package: msmtp
+Architecture: any
+Depends:
+    ${shlibs:Depends},
+    ${misc:Depends},
+    adduser,
+    ucf
+Conflicts: msmtp-gnome
+Recommends: ca-certificates
+Suggests: msmtp-mta
+Description: light SMTP client with support for server profiles
+ msmtp is an SMTP client that can be used to send mails from Mutt and probably
+ other MUAs (mail user agents). It forwards mails to an SMTP server (for
+ example at a free mail provider), which takes care of the final delivery.
+ Using profiles, it can be easily configured to use different SMTP servers
+ with different configurations, which makes it ideal for mobile clients.
+
+Package: msmtp-mta
+Architecture: any
+Pre-Depends: ${misc:Pre-Depends}
+Depends:
+    ${shlibs:Depends},
+    ${misc:Depends},
+    msmtp (= ${binary:Version}),
+    adduser
+Recommends: libsecret-tools | keepassxc | seahorse | kwalletmanager
+Provides: mail-transport-agent
+Conflicts: mail-transport-agent
+Replaces: mail-transport-agent
+Description: light SMTP client with support for server profiles - the regular MTA
+ msmtp is an SMTP client that can be used to send mails from Mutt and probably
+ other MUAs (mail user agents). It forwards mails to an SMTP server (for
+ example at a free mail provider), which takes care of the final delivery.
+ Using profiles, it can be easily configured to use different SMTP servers
+ with different configurations, which makes it ideal for mobile clients.
+ .
+ This package is compiled with SASL and TLS/SSL support.
+ .
+ This package provides the regular MTA program.

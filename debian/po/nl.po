@@ -1,0 +1,101 @@
+# Dutch translation of msmtp debconf templates.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the msmtp package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# Bart Cornelis <cobaco@skolelinux.no>, 2007.
+# Frans Spiesschaert <Frans.Spiesschaert@yucom.be>, 2021-2022.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: msmtp_1.8.22-1\n"
+"Report-Msgid-Bugs-To: msmtp@packages.debian.org\n"
+"POT-Creation-Date: 2022-10-27 23:33+0000\n"
+"PO-Revision-Date: 2022-11-11 15:53+0100\n"
+"Last-Translator: Frans Spiesschaert <Frans.Spiesschaert@yucom.be>\n"
+"Language-Team: Debian Dutch l10n Team <debian-l10n-dutch@lists.debian.org>\n"
+"Language: nl\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Generator: Poedit 2.2.1\n"
+
+#. Type: boolean
+#. Description
+#: ../msmtp.templates:1001
+msgid "Enable AppArmor support?"
+msgstr "Ondersteuning voor AppArmor aanzetten?"
+
+#. Type: boolean
+#. Description
+#: ../msmtp.templates:1001
+msgid ""
+" Apparmor is a kernel security mechanism to restrict programs capabilities\n"
+" with per-program profiles.\n"
+" .\n"
+" The AppArmor profile for msmtp covers a lot of common usecases but there "
+"are\n"
+" still corner cases with some options which breaks msmtp with "
+"incomprehensible\n"
+" permissions denied errors."
+msgstr ""
+" Apparmor is een kernelbeveiligingsmechanisme dat de mogelijkheden van\n"
+" programma's kan inperken met programmaspecifieke profielen.\n"
+" .\n"
+" Het AppArmor-profiel voor msmtp dekt veel voorkomende gevallen, maar er "
+"zijn\n"
+" nog steeds uitzonderlijke gevallen met bepaalde opties die msmtp onklaar\n"
+" maken met onbegrijpelijke foutmeldingen over geen toegangsrechten."
+
+#. Type: error
+#. Description
+#: ../msmtp.templates:2001
+msgid "Remove SetGID bit on msmtp"
+msgstr "Weghalen van het SetGID-bit bij msmtp"
+
+#. Type: error
+#. Description
+#: ../msmtp.templates:2001
+msgid ""
+" Starting from version 1.8.22, msmtp will no longer be SetGID. Hence the\n"
+" creation of the system-wide configuration (/etc/msmtprc) using debconf is\n"
+" removed.\n"
+" .\n"
+" From one side, using the system wide configuration implied msmtp to be "
+"SetGID\n"
+" but recent security hardening changes in GLib prevent SetGID binaries "
+"built\n"
+" against libsecret to talk to the D-Bus session, and therefore prevent it "
+"from\n"
+" being able to retrieve passwords from gnome-keyring or KWallet.\n"
+" .\n"
+" On another side, it was easy for a local user to obtain the credentials\n"
+" stored in /etc/msmtprc even if the file was not readable for this user "
+"when\n"
+" msmtp was SetGid.\n"
+" .\n"
+" More information in the following bug reports:\n"
+"   - https://bugs.debian.org/944188\n"
+"   - https://bugs.debian.org/995012"
+msgstr ""
+" Vanaf versie 1.8.22 is msmtp niet langer SetGID. Daarom\n"
+" wordt het aanmaken van een voor het hele systeem geldende\n"
+" configuratie (/etc/msmtprc) met behulp van debconf niet\n"
+" langer toegepast.\n"
+" .\n"
+" Enerzijds impliceerde het gebruik van de voor het hele\n"
+" systeem geldende configuratie dat msmtp SetGID was, maar\n"
+" recente wijzigingen met het oog op een strengere\n"
+" beveiliging in GLib voorkomen dat SetGID-binaire\n"
+" bestanden die tegen libsecret gebouwd zijn, met de\n"
+" D-Bus-sessie kunnen praten, en dus dat ze wachtwoorden\n"
+" kunnen ophalen bij gnome-keyring of KWallet.\n"
+" .\n"
+" Anderzijds was het gemakkelijk voor een lokale gebruiker\n"
+" om de inloggegevens te verkrijgen die waren opgeslagen\n"
+" in /etc/msmtprc, zelfs als het bestand niet leesbaar was\n"
+" voor deze gebruiker toen msmtp SetGid was.\n"
+" .\n"
+" Meer informatie in de volgende bugrapporten:\n"
+"   - https://bugs.debian.org/944188\n"
+"   - https://bugs.debian.org/995012"

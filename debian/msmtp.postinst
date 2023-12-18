@@ -1,0 +1,38 @@
+#!/bin/sh
+
+set -e
+
+if [ -e /usr/share/debconf/confmodule ]; then
+    . /usr/share/debconf/confmodule
+fi
+
+apply_apparmor() {
+    enable="$1"
+    AA_DIR="/etc/apparmor.d/"
+    AA_PROFILE="usr.bin.msmtp"
+    AA_CONF="$AA_DIR/$AA_PROFILE"
+    AA_DISABLE="$AA_DIR/disable/$AA_PROFILE"
+    case "$enable" in
+        true)
+            rm -f "$AA_DISABLE"
+            ;;
+        *)
+            mkdir -p "$AA_DIR/disable" || true
+            if [ -d "$AA_DIR/disable" ] && [ -f "$AA_CONF" ]; then
+                ln -sf "$AA_CONF" "$AA_DISABLE"
+            fi
+            ;;
+    esac
+}
+
+case $1 in
+    configure)
+        db_get msmtp/apparmor
+        apply_apparmor "$RET"
+        ;;
+    *)
+        exit 0
+        ;;
+esac
+
+#DEBHELPER#

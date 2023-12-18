@@ -1,0 +1,5 @@
+usr/share/vim/addons/syntax
+usr/share/vim/registry
+etc/apparmor.d
+usr/libexec/msmtp/msmtpq
+usr/libexec/msmtp/msmtpqueue

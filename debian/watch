@@ -1,0 +1,2 @@
+version=4
+opts=pgpmode=auto https://marlam.de/msmtp/download/ ../releases/msmtp-([\d\.]+)@ARCHIVE_EXT@ debian uupdate
