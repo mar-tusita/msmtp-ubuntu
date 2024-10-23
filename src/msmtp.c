@@ -1997,16 +1997,23 @@ void msmtp_log_to_file(const char *logfile, const char *logfile_time_format,
     int e;
 
     /* get time */
-    t = time(NULL); /* cannot fail */
-    tm = localtime(&t); /* cannot fail */
-    time_fmt = logfile_time_format ? logfile_time_format : "%b %d %H:%M:%S";
-    if (strftime(time_str, sizeof(time_str), time_fmt, tm) == 0)
+    if (logfile_time_format && strcmp(logfile_time_format, "none") == 0)
     {
-        /* a return value of 0 is only an error with a non-empty time_fmt,
-         * but we know it is non-empty since we cannot configure an empty
-         * logfile_time_format in msmtp (it would be set to NULL). */
-        failure_reason = xasprintf(_("invalid logfile_time_format"));
-        goto log_failure;
+        time_str[0] = '\0';
+    }
+    else
+    {
+        t = time(NULL); /* cannot fail */
+        tm = localtime(&t); /* cannot fail */
+        time_fmt = logfile_time_format ? logfile_time_format : "%b %d %H:%M:%S";
+        if (strftime(time_str, sizeof(time_str), time_fmt, tm) == 0)
+        {
+            /* a return value of 0 is only an error with a non-empty time_fmt,
+             * but we know it is non-empty since we cannot configure an empty
+             * logfile_time_format in msmtp (it would be set to NULL). */
+            failure_reason = xasprintf(_("invalid logfile_time_format"));
+            goto log_failure;
+        }
     }
 
     /* write log to file */
@@ -2037,7 +2044,7 @@ void msmtp_log_to_file(const char *logfile, const char *logfile_time_format,
             goto log_failure;
         }
     }
-    if ((fputs(time_str, f) == EOF) || (fputc(' ', f) == EOF)
+    if ((time_str[0] && ((fputs(time_str, f) == EOF) || (fputc(' ', f) == EOF)))
         || (fputs(loginfo, f) == EOF) || (fputc('\n', f) == EOF))
     {
         failure_reason = xstrdup(_("output error"));
@@ -3316,6 +3323,7 @@ int msmtp_cmdline(msmtp_cmdline_conf_t *conf, int argc, char *argv[])
             case 'F':
                 free(conf->cmdline_account->from_full_name);
                 conf->cmdline_account->from_full_name = xstrdup(optarg);
+                conf->cmdline_account->mask |= ACC_FROM_FULL_NAME;
                 break;
 
             case LONGONLYOPT_KEEPBCC:
@@ -4187,8 +4195,10 @@ int main(int argc, char *argv[])
         {
             if (account->from_full_name)
             {
+                char *enc_name = encode_for_header(account->from_full_name);
                 fprintf(prepend_header_tmpfile, "From: %s <%s>\n",
-                        account->from_full_name, account->from);
+                        enc_name, account->from);
+                free(enc_name);
             }
             else
             {

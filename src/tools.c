@@ -35,6 +35,7 @@
 # include <lmcons.h>
 # include <sys/locking.h>
 # include <limits.h>
+# include <winnls.h>
 #else
 # include <pwd.h>
 #endif
@@ -51,8 +52,12 @@
 #ifdef ENABLE_NLS
 # include <locale.h>
 #endif
+#ifdef HAVE_LANGINFO_H
+# include <langinfo.h>
+#endif
 
 #include "xalloc.h"
+#include "base64.h"
 #include "tools.h"
 
 
@@ -786,6 +791,7 @@ int token_in_string(const char *string, const char *token)
         if (i == 0 || string[i - 1] == ' ') /* valid start of token */
         {
             if (string[i + token_len] == ' '
+                    || string[i + token_len] == '\r'
                     || string[i + token_len] == '\0') /* valid end of token */
             {
                 found = 1;
@@ -905,4 +911,69 @@ int check_hostname_matches_domain(const char *hostname, const char *domain)
      * (so that hostname="xxexample.com" does not match "example.com") */
     return (hostname[hostname_len - 1 - domain_len] == '.'
             && strcasecmp(hostname + (hostname_len - domain_len), domain) == 0) ? 1 : 0;
+}
+
+
+/*
+ * encode_for_header()
+ *
+ * see tools.h
+ */
+
+#ifdef W32_NATIVE
+char *w32_langinfo_codeset()
+{
+    static char codeset[] = "CP4294967296";
+    sprintf(codeset, "CP%u", GetACP());
+    return codeset;
+}
+#endif
+
+char *encode_for_header(const char *s)
+{
+    int needsEncoding = 0;
+    for (int i = 0; s[i]; i++)
+    {
+        if (s[i] < 32 || s[i] >= 127)
+        {
+            needsEncoding = 1;
+            break;
+        }
+    }
+    if (needsEncoding)
+    {
+        /* create a string of the form "=?ENCODING?B?BASE64STRING?=" */
+        size_t s_len = strlen(s);
+        size_t b64_s_len = BASE64_LENGTH(s_len);
+        char* encoding =
+#ifdef HAVE_LANGINFO_H
+                nl_langinfo(CODESET);
+#else
+# ifdef W32_NATIVE
+                w32_langinfo_codeset();
+# else
+                "UTF-8";
+# endif
+#endif
+        size_t e_len = strlen(encoding);
+        size_t enc_len = 2 + e_len + 3 + b64_s_len + 3;
+        char *enc = xmalloc(enc_len + 1);
+        size_t i = 0;
+        enc[i++] = '=';
+        enc[i++] = '?';
+        for (size_t j = 0; j < e_len; j++)
+        {
+            enc[i++] = tolower(encoding[j]);
+        }
+        enc[i++] = '?';
+        enc[i++] = 'B';
+        enc[i++] = '?';
+        base64_encode(s, s_len, enc + i, enc_len - i + 1);
+        strcat(enc, "?=");
+        return enc;
+    }
+    else
+    {
+        return xstrdup(s);
+    }
 }
