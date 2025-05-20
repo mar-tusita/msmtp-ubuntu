@@ -4,7 +4,7 @@
  * This file is part of msmtp, an SMTP client.
  *
  * Copyright (C) 2000, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011,
- * 2014, 2016, 2018, 2019, 2020, 2021, 2022, 2023
+ * 2014, 2016, 2018, 2019, 2020, 2021, 2022, 2023, 2024
  * Martin Lambers <marlam@marlam.de>
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -519,6 +519,10 @@ int smtp_init(smtp_server_t *srv, const char *ehlo_domain, list_t **errmsg,
         else if (strncmp(s + 4, "ETRN", 4) == 0)
         {
             srv->cap.flags |= SMTP_CAP_ETRN;
+        }
+        else if (strncmp(s + 4, "SMTPUTF8", 8) == 0)
+        {
+            srv->cap.flags |= SMTP_CAP_SMTPUTF8;
         }
     }
 
@@ -1701,18 +1705,11 @@ int smtp_send_envelope(smtp_server_t *srv,
             /* send */
             if (!mailfrom_cmd_was_sent)
             {
-                if (dsn_return)
-                {
-                    e = smtp_send_cmd(srv, errstr, "MAIL FROM:<%s> RET=%s",
-                            strcasecmp(envelope_from, "MAILER-DAEMON") == 0
-                            ? "" : envelope_from, dsn_return);
-                }
-                else
-                {
-                    e = smtp_send_cmd(srv, errstr, "MAIL FROM:<%s>",
-                            strcasecmp(envelope_from, "MAILER-DAEMON") == 0
-                            ? "" : envelope_from);
-                }
+                e = smtp_send_cmd(srv, errstr, "MAIL FROM:<%s>%s%s%s",
+                        strcasecmp(envelope_from, "MAILER-DAEMON") == 0
+                        ? "" : envelope_from,
+                        dsn_return ? " RET=" : "", dsn_return ? dsn_return : "",
+                        srv->cap.flags & SMTP_CAP_SMTPUTF8 ? " SMTPUTF8" : "");
                 if (e != SMTP_EOK)
                 {
                     return e;

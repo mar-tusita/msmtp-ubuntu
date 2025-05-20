@@ -24,7 +24,7 @@ dnl Process this file with autoconf to produce a configure script.
 #
 
 dnl Autotools init stuff
-AC_INIT([msmtp],[1.8.27],[marlam@marlam.de],[msmtp],[https://marlam.de/msmtp])
+AC_INIT([msmtp],[1.8.28],[marlam@marlam.de],[msmtp],[https://marlam.de/msmtp])
 AC_CONFIG_SRCDIR([src/msmtp.c])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_HEADERS([config.h])
@@ -43,6 +43,7 @@ AC_DEFINE_UNQUOTED([PLATFORM], ["${target}"], [Platform triplet])
 case "${target}" in *-*-mingw*) LIBS="$LIBS -lws2_32"; build_msmtpd_default="no" ;; esac
 
 dnl Gettext
+AM_GNU_GETTEXT_REQUIRE_VERSION([0.21])
 AM_GNU_GETTEXT([external])
 
 dnl Headers, functions, and types
@@ -180,9 +181,9 @@ AC_SUBST([tls_LIBS])
 dnl GNU SASL
 AC_ARG_WITH([libgsasl], [AS_HELP_STRING([--with-libgsasl],
 	[Use GNU SASL authentication library.])],
-    [libgsasl=$withval], [libgsasl=no])
+    [libgsasl=$withval], [libgsasl=yes])
 if test "$libgsasl" != "no"; then
-    PKG_CHECK_MODULES([libgsasl], [libgsasl >= 0.0], [HAVE_LIBGSASL=1], [HAVE_LIBGSASL=0])
+    PKG_CHECK_MODULES([libgsasl], [libgsasl >= 2.1], [HAVE_LIBGSASL=1], [HAVE_LIBGSASL=0])
     if test "$HAVE_LIBGSASL" != "1"; then
 	AC_MSG_WARN([library libgsasl not found:])
 	AC_MSG_WARN([$libgsasl_PKG_ERRORS])

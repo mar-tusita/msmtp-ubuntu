@@ -4,7 +4,7 @@
  * This file is part of msmtp, an SMTP client.
  *
  * Copyright (C) 2000, 2003, 2004, 2005, 2006, 2007, 2008, 2010, 2011, 2014,
- * 2016, 2018, 2019, 2020, 2021, 2022, 2023
+ * 2016, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025
  * Martin Lambers <marlam@marlam.de>
  * Martin Stenberg <martin@gnutiken.se> (passwordeval support)
  * Scott Shumate <sshumate@austin.rr.com> (aliases support)
@@ -81,8 +81,8 @@
 #define ACC_SET_FROM_HEADER             (1LL << 31LL)
 #define ACC_SET_DATE_HEADER             (1LL << 32LL)
 #define ACC_SET_MSGID_HEADER            (1LL << 33LL)
-#define ACC_REMOVE_BCC_HEADERS          (1LL << 34LL)
-#define ACC_UNDISCLOSED_RECIPIENTS      (1LL << 35LL)
+#define ACC_SET_TO_HEADER               (1LL << 34LL)
+#define ACC_REMOVE_BCC_HEADERS          (1LL << 35LL)
 #define ACC_SOURCE_IP                   (1LL << 36LL)
 #define ACC_LOGFILE_TIME_FORMAT         (1LL << 37LL)
 #define ACC_SOCKET                      (1LL << 38LL)
@@ -145,8 +145,8 @@ typedef struct
     int set_from_header;        /* 0=off, 1=on, 2=auto */
     int set_date_header;        /* 0=off,       2=auto */
     int set_msgid_header;       /* 0=off,       2=auto */
+    int set_to_header;          /* 0=off, 1=on, 2=undisclosed_recipients */
     int remove_bcc_headers;     /* remove the Bcc headers from the mail? */
-    int undisclosed_recipients; /* remove To, Cc, Bcc, add anonymous To */
     /* source ip binding */
     char *source_ip;            /* Source IP to bind the connection to */
     /* unix domain socket */
@@ -290,7 +290,7 @@ int check_account(account_t *acc, int sendmail_mode, char **errstr);
  * or, if an error occured, one of the CONF_E* error codes, in which case
  * *errstr will contain an error string.
  */
-int expand_from(char **from, char **errstr);
+int expand_from(char **from, const char *envelope_from, char **errstr);
 
 /*
  * expand_domain()

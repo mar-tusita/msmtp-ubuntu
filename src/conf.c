@@ -4,7 +4,7 @@
  * This file is part of msmtp, an SMTP client.
  *
  * Copyright (C) 2000, 2003, 2004, 2005, 2006, 2007, 2008, 2010, 2011, 2012,
- * 2014, 2015, 2016, 2018, 2019, 2020, 2021, 2022, 2023
+ * 2014, 2015, 2016, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025
  * Martin Lambers <marlam@marlam.de>
  * Martin Stenberg <martin@gnutiken.se> (passwordeval support)
  * Scott Shumate <sshumate@austin.rr.com> (aliases support)
@@ -106,8 +106,8 @@ account_t *account_new(const char *conffile, const char *id)
     a->set_from_header = 2;
     a->set_date_header = 2;
     a->set_msgid_header = 2;
+    a->set_to_header = 0;
     a->remove_bcc_headers = 1;
-    a->undisclosed_recipients = 0;
     a->source_ip = NULL;
     a->socketname = NULL;
     return a;
@@ -199,8 +199,8 @@ account_t *account_copy(account_t *acc)
         a->set_from_header = acc->set_from_header;
         a->set_date_header = acc->set_date_header;
         a->set_msgid_header = acc->set_msgid_header;
+        a->set_to_header = acc->set_to_header;
         a->remove_bcc_headers = acc->remove_bcc_headers;
-        a->undisclosed_recipients = acc->undisclosed_recipients;
         a->source_ip = acc->source_ip ? xstrdup(acc->source_ip) : NULL;
         a->socketname = acc->socketname ? xstrdup(acc->socketname) : NULL;
     }
@@ -757,10 +757,6 @@ void override_account(account_t *acc1, account_t *acc2)
     {
         acc1->remove_bcc_headers = acc2->remove_bcc_headers;
     }
-    if (acc2->mask & ACC_UNDISCLOSED_RECIPIENTS)
-    {
-        acc1->undisclosed_recipients = acc2->undisclosed_recipients;
-    }
     if (acc2->mask & ACC_LOGFILE)
     {
         free(acc1->logfile);
@@ -802,6 +798,10 @@ void override_account(account_t *acc1, account_t *acc2)
     if (acc2->mask & ACC_SET_MSGID_HEADER)
     {
         acc1->set_msgid_header = acc2->set_msgid_header;
+    }
+    if (acc2->mask & ACC_SET_TO_HEADER)
+    {
+        acc1->set_to_header = acc2->set_to_header;
     }
     if (acc2->mask & ACC_SOURCE_IP)
     {
@@ -878,13 +878,9 @@ int check_account(account_t *acc, int sendmail_mode, char **errstr)
  * helper function for expand_from() and expand_domain()
  */
 
-static int expand_from_or_domain(char **str, int expand_U, char **errstr)
+static int expand_from_or_domain(char **str, int expand_U,
+        const char *envelope_from, char **errstr)
 {
-    char* M = NULL;
-    char* U = NULL;
-    char* H = NULL;
-    char* C = NULL;
-
     if (strstr(*str, "%M"))
     {
         char *sysconfdir;
@@ -927,43 +923,39 @@ static int expand_from_or_domain(char **str, int expand_U, char **errstr)
             return CONF_EPARSE;
         }
         free(filename);
-        M = xstrdup(buf);
-        sanitize_string(M);
+        sanitize_string(buf);
+        *str = string_replace(*str, "%M", buf);
     }
     if (expand_U && strstr(*str, "%U"))
     {
-        U = get_username();
+        char *U = get_username();
         sanitize_string(U);
-    }
-    if (strstr(*str, "%H") || strstr(*str, "%C"))
-    {
-        H = get_hostname();
-        sanitize_string(H);
-    }
-    if (strstr(*str, "%C"))
-    {
-        C = net_get_canonical_hostname(H);
-    }
-
-    if (M)
-    {
-        *str = string_replace(*str, "%M", M);
-        free(M);
-    }
-    if (U)
-    {
         *str = string_replace(*str, "%U", U);
         free(U);
     }
-    if (H)
+    if (strstr(*str, "%H") || strstr(*str, "%C"))
     {
-        *str = string_replace(*str, "%H", H);
+        char *H = get_hostname();
+        sanitize_string(H);
+        if (strstr(*str, "%C"))
+        {
+            char *C = net_get_canonical_hostname(H);
+            sanitize_string(C);
+            *str = string_replace(*str, "%C", C);
+            free(C);
+        }
+        if (strstr(*str, "%H"))
+        {
+            *str = string_replace(*str, "%H", H);
+        }
         free(H);
     }
-    if (C)
+    if (envelope_from && strstr(*str, "%F"))
     {
-        *str = string_replace(*str, "%C", C);
-        free(C);
+        char *F = xstrdup(envelope_from);
+        sanitize_string(F);
+        *str = string_replace(*str, "%F", F);
+        free(F);
     }
 
     return CONF_EOK;
@@ -976,9 +968,9 @@ static int expand_from_or_domain(char **str, int expand_U, char **errstr)
  * see conf.h
  */
 
-int expand_from(char **from, char **errstr)
+int expand_from(char **from, const char *envelope_from, char **errstr)
 {
-    return expand_from_or_domain(from, 1, errstr);
+    return expand_from_or_domain(from, 1, envelope_from, errstr);
 }
 
 
@@ -990,7 +982,7 @@ int expand_from(char **from, char **errstr)
 
 int expand_domain(char **domain, char **errstr)
 {
-    return expand_from_or_domain(domain, 0, errstr);
+    return expand_from_or_domain(domain, 0, NULL, errstr);
 }
 
 
@@ -1956,16 +1948,20 @@ int read_conffile(const char *conffile, FILE *f, list_t **acc_list,
                 break;
             }
         }
-        else if (strcmp(cmd, "remove_bcc_headers") == 0)
+        else if (strcmp(cmd, "set_to_header") == 0)
         {
-            acc->mask |= ACC_REMOVE_BCC_HEADERS;
+            acc->mask |= ACC_SET_TO_HEADER;
             if (*arg == '\0' || is_on(arg))
             {
-                acc->remove_bcc_headers = 1;
+                acc->set_to_header = 1;
             }
             else if (is_off(arg))
             {
-                acc->remove_bcc_headers = 0;
+                acc->set_to_header = 0;
+            }
+            else if (strcmp(arg, "undisclosed_recipients") == 0)
+            {
+                acc->set_to_header = 2;
             }
             else
             {
@@ -1976,16 +1972,16 @@ int read_conffile(const char *conffile, FILE *f, list_t **acc_list,
                 break;
             }
         }
-        else if (strcmp(cmd, "undisclosed_recipients") == 0)
+        else if (strcmp(cmd, "remove_bcc_headers") == 0)
         {
-            acc->mask |= ACC_UNDISCLOSED_RECIPIENTS;
+            acc->mask |= ACC_REMOVE_BCC_HEADERS;
             if (*arg == '\0' || is_on(arg))
             {
-                acc->undisclosed_recipients = 1;
+                acc->remove_bcc_headers = 1;
             }
             else if (is_off(arg))
             {
-                acc->undisclosed_recipients = 0;
+                acc->remove_bcc_headers = 0;
             }
             else
             {
@@ -2020,6 +2016,27 @@ int read_conffile(const char *conffile, FILE *f, list_t **acc_list,
             else
             {
                 acc->socketname = xstrdup(arg);
+            }
+        }
+        else if (strcmp(cmd, "undisclosed_recipients") == 0)
+        {
+            /* compatibility with < 1.8.29 */
+            acc->mask |= ACC_SET_TO_HEADER;
+            if (*arg == '\0' || is_on(arg))
+            {
+                acc->set_to_header = 2;
+            }
+            else if (is_off(arg))
+            {
+                acc->set_to_header = 0;
+            }
+            else
+            {
+                *errstr = xasprintf(
+                        _("line %d: invalid argument %s for command %s"),
+                        line, arg, cmd);
+                e = CONF_ESYNTAX;
+                break;
             }
         }
         else if (strcmp(cmd, "add_missing_from_header") == 0)

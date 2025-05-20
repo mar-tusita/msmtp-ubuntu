@@ -73,12 +73,22 @@
 ##   if more than one mail per second is sent
 ##--------------------------------------------------------------
 
-# exit             on error            or pipe error:
-set -o errtrace -o errexit            -o pipefail
+# exit on error or pipe error:
+set -o errtrace -o errexit -o pipefail
 # optionally debug output by supplying TRACE=1
 [[ "${TRACE:-0}" == "1" ]] && set -o xtrace
 
-shopt -s inherit_errexit
+bash_has_min_version() {
+    ((  ( BASH_VERSINFO[0] > $1 )
+        || ( BASH_VERSINFO[0] == $1  &&  BASH_VERSINFO[1] >= $2 ) ))
+}
+
+# see https://git.savannah.gnu.org/gitweb/?p=bash.git;a=blob;f=NEWS;hb=6794b5478f660256a1023712b5fc169196ed0a22#l654
+if bash_has_min_version 4 4 ; then
+    if [ "$POSIXLY_CORRECT" = "y" ]; then
+        shopt -s inherit_errexit 2>/dev/null
+    fi
+fi
 IFS=$' \n\t'
 PS4='+\t '
 
@@ -159,16 +169,18 @@ fi
 ##
 ## the queue log file - export this variable to change where logs are stored  (but no quotes !!)
 ##                      Set it to "" (empty string) to disable logging.
-if [ -z "$MSMTPQ_LOG" ] ; then
+if [ -z ${MSMTPQ_LOG+x} ] ; then
   MSMTPQ_LOG="${LOG:-"$HOME/log/msmtp.queue.log"}"
 fi
-msmtpq_log_dir="$(dirname "$MSMTPQ_LOG")"
-[ -d "$msmtpq_log_dir" ] || mkdir -p "$msmtpq_log_dir"
-if ! [ -d "$msmtpq_log_dir" ]; then
-  err "msmtpq : can't create missing msmtp queue log file directory [ $msmtpq_log_dir ]"
-  exit 1
+if [ -n "$MSMTPQ_LOG" ] ; then
+  msmtpq_log_dir="$(dirname "$MSMTPQ_LOG")"
+  [ -d "$msmtpq_log_dir" ] || mkdir -p "$msmtpq_log_dir"
+  if ! [ -d "$msmtpq_log_dir" ]; then
+      err "msmtpq : can't create missing msmtp queue log file directory [ $msmtpq_log_dir ]"
+      exit 1
+  fi
+  unset msmptq_log_dir
 fi
-unset msmptq_log_dir
 
 umask 077                            # set secure permissions on created directories and files
 
@@ -210,7 +222,7 @@ log() {
     shift 2                          # shift opt & its arg off
     err "$@"                         # display msg to user, as well as logging it
   elif [ -z "$EMAIL_QUEUE_QUIET" ]; then
-    dsp "$@"                         # display msg to user, as well as logging it
+    dsp "$@"                         # display msg to user
   fi
 
   if [ -n "$MSMTPQ_LOG" ] ; then     # log is defined and in use
@@ -263,6 +275,14 @@ lock_queue() {        # <-- '-u' to remove lockfile
 ## test whether system is connected
 ## returns t/f (0/1)
 ##
+case $(uname | tr '[:upper:]' '[:lower:]') in
+  darwin* | *bsd)
+    PING_TIMEOUT_FLAG=t
+    ;;
+  *)
+    PING_TIMEOUT_FLAG=w
+    ;;
+esac
 connect_test() {
   if [ -z "$EMAIL_CONN_TEST" ] || \
      [ "$EMAIL_CONN_TEST" = 'p' ] ; then                       # use ping test (default)
@@ -270,13 +290,13 @@ connect_test() {
     # would ping -qnc2 -w4 be better ?
     # would ping -qnc1 -w10 or -w20 be better ?
     #ping -qnc1 -w4 debian.org >/dev/null 2>&1 || return 1
-    ping -qnc2 -w10 debian.org >/dev/null 2>&1 || return 1
+    ping -qnc2 -${PING_TIMEOUT_FLAG}10 debian.org >/dev/null 2>&1 || return 1
 
   elif [ "$EMAIL_CONN_TEST" = 'P' ] ; then                     # use quicker ping test
     # I personally think that including a DNS lookup
     # is a better connection test but some
     # have found the above test too slow
-    ping -qnc1 -w4 8.8.8.8 >/dev/null 2>&1 || return 1
+    ping -qnc1 -${PING_TIMEOUT_FLAG}4 8.8.8.8 >/dev/null 2>&1 || return 1
 
   elif [ "$EMAIL_CONN_TEST" = 'n' ] ; then                     # use netcat (nc) test
     # must, of course, have netcat (nc) installed
@@ -375,10 +395,22 @@ send_queued_mail() {   # <-- mail id
   fi                                                           # (but allow continuation)
 }
 
+is_queue_dir_empty() {
+    # - "shopt -p" is available as of bash 2.01.1
+    # - "trap ... RETURN" is available as of bash 2.05b
+    # - the return value of shopt must be ignored (the manual says:
+    #   "The return status when listing options is zero if all
+    #   optnames are enabled, non-zero otherwise.")
+    trap "$(shopt -p nullglob || true)" RETURN
+    shopt -s nullglob
+    files=( "$MSMTPQ_Q"/*.mail )
+    (( ${#files[@]} == 0 ))
+}
+
 ## run (flush) queue
 ##
 run_queue() {    # <- 'sm' mode      # run queue
-  if [ -z "$(ls -A "$MSMTPQ_Q"/*.mail 2>/dev/null)" ]; then
+  if is_queue_dir_empty ; then
     [ -n "$1" ] || dsp '' 'mail queue is empty (nothing to send)' ''
     return
   fi
@@ -398,7 +430,7 @@ run_queue() {    # <- 'sm' mode      # run queue
 ## display queue contents
 ##
 display_queue() {      # <-- { 'purge' | 'send' } (op label) ; { 'rec' } (record array of mail ids)
-  if [ -z "$(ls -A "$MSMTPQ_Q"/*.mail 2>/dev/null)" ]; then
+  if is_queue_dir_empty ; then
     if [ -z "$1" ]; then
       dsp '' 'no mail in queue' ''
     else

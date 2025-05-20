@@ -4,7 +4,8 @@
  * This file is part of msmtp, an SMTP client.
  *
  * Copyright (C) 2000, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011,
- * 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024
+ * 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024,
+ * 2025
  * Martin Lambers <marlam@marlam.de>
  * Martin Stenberg <martin@gnutiken.se> (passwordeval support)
  * Scott Shumate <sshumate@austin.rr.com> (aliases support)
@@ -514,6 +515,11 @@ int msmtp_serverinfo(account_t *acc, int debug, list_t **msg, char **errstr)
         {
             printf("    PIPELINING:\n        %s\n", _("Support for command "
                         "grouping for faster transmission"));
+        }
+        if (srv.cap.flags & SMTP_CAP_SMTPUTF8)
+        {
+            printf("    SMTPUTF8:\n        %s\n", _("Support for "
+                "Internationalized Email"));
         }
         if (srv.cap.flags & SMTP_CAP_ETRN)
         {
@@ -1605,10 +1611,10 @@ int msmtp_sendmail(account_t *acc, list_t *recipients,
     /* next: original mail headers */
     if ((e = smtp_send_mail(&srv, header_file,
                     !prepend_header_contains_from, /* keep_from */
-                    !acc->undisclosed_recipients,  /* keep_to */
-                    !acc->undisclosed_recipients,  /* keep_cc */
-                    !acc->undisclosed_recipients
-                    && !acc->remove_bcc_headers,   /* keep_bcc */
+                    acc->set_to_header == 0,       /* keep_to */
+                    acc->set_to_header == 0,       /* keep_cc */
+                    !acc->remove_bcc_headers
+                    && acc->set_to_header == 0,    /* keep_bcc */
                     mailsize, errstr)) != SMTP_EOK)
     {
         msmtp_endsession(&srv, 0);
@@ -2272,7 +2278,7 @@ void msmtp_print_version(void)
                     "it under the terms of\n"
                 "the GNU General Public License "
                     "<http://www.gnu.org/licenses/gpl.html>.\n"
-                "There is NO WARRANTY, to the extent permitted by law.\n"), 2024);
+                "There is NO WARRANTY, to the extent permitted by law.\n"), 2025);
 }
 
 
@@ -2355,9 +2361,8 @@ void msmtp_print_help(void)
     printf(_("  --set-from-header[=(auto|on|off)] set From header handling\n"));
     printf(_("  --set-date-header[=(auto|off)] set Date header handling\n"));
     printf(_("  --set-msgid-header[=(auto|off)] set Message-ID header handling\n"));
+    printf(_("  --set-to-header[=(on|off|undisclosed_recipients)] set To header handling\n"));
     printf(_("  --remove-bcc-headers[=(on|off)] enable/disable removal of Bcc headers\n"));
-    printf(_("  --undisclosed-recipients[=(on|off)] enable/disable replacement of To/Cc/Bcc\n"
-             "                               with To: undisclosed-recipients:;\n"));
     printf(_("  --                           end of options\n"));
     printf(_("Accepted but ignored: -A, -B, -bm, -G, -h, -i, -L, -m, -n, -O, -o\n"));
     printf(_("\nReport bugs to <%s>.\n"), PACKAGE_BUGREPORT);
@@ -2438,6 +2443,7 @@ typedef struct
 #define LONGONLYOPT_SET_FROM_HEADER             (256 + 39)
 #define LONGONLYOPT_SET_DATE_HEADER             (256 + 40)
 #define LONGONLYOPT_SET_MSGID_HEADER            (256 + 41)
+#define LONGONLYOPT_SET_TO_HEADER               (256 + 42)
 
 int msmtp_cmdline(msmtp_cmdline_conf_t *conf, int argc, char *argv[])
 {
@@ -2500,6 +2506,8 @@ int msmtp_cmdline(msmtp_cmdline_conf_t *conf, int argc, char *argv[])
             LONGONLYOPT_SET_DATE_HEADER },
         { "set-msgid-header", optional_argument, 0,
             LONGONLYOPT_SET_MSGID_HEADER },
+        { "set-to-header", optional_argument, 0,
+            LONGONLYOPT_SET_TO_HEADER },
         { "remove-bcc-headers", optional_argument, 0,
             LONGONLYOPT_REMOVE_BCC_HEADERS },
         { "undisclosed-recipients", optional_argument, 0,
@@ -3193,6 +3201,28 @@ int msmtp_cmdline(msmtp_cmdline_conf_t *conf, int argc, char *argv[])
                 conf->cmdline_account->mask |= ACC_SET_MSGID_HEADER;
                 break;
 
+            case LONGONLYOPT_SET_TO_HEADER:
+                if (!optarg || is_on(optarg))
+                {
+                    conf->cmdline_account->set_to_header = 1;
+                }
+                else if (is_off(optarg))
+                {
+                    conf->cmdline_account->set_to_header = 0;
+                }
+                else if (strcmp(optarg, "undisclosed_recipients") == 0)
+                {
+                    conf->cmdline_account->set_to_header = 2;
+                }
+                else
+                {
+                    print_error(_("invalid argument %s for %s"),
+                            optarg, "--set-to-header");
+                    error_code = 1;
+                }
+                conf->cmdline_account->mask |= ACC_SET_TO_HEADER;
+                break;
+
             case LONGONLYOPT_ADD_MISSING_FROM_HEADER:
                 /* compatibility with < 1.8.8 */
                 if (!optarg || is_on(optarg))
@@ -3247,24 +3277,6 @@ int msmtp_cmdline(msmtp_cmdline_conf_t *conf, int argc, char *argv[])
                     error_code = 1;
                 }
                 conf->cmdline_account->mask |= ACC_REMOVE_BCC_HEADERS;
-                break;
-
-            case LONGONLYOPT_UNDISCLOSED_RECIPIENTS:
-                if (!optarg || is_on(optarg))
-                {
-                    conf->cmdline_account->undisclosed_recipients = 1;
-                }
-                else if (is_off(optarg))
-                {
-                    conf->cmdline_account->undisclosed_recipients = 0;
-                }
-                else
-                {
-                    print_error(_("invalid argument %s for %s"),
-                            optarg, "--undisclosed-recipients");
-                    error_code = 1;
-                }
-                conf->cmdline_account->mask |= ACC_UNDISCLOSED_RECIPIENTS;
                 break;
 
             case LONGONLYOPT_SOURCE_IP:
@@ -3324,6 +3336,25 @@ int msmtp_cmdline(msmtp_cmdline_conf_t *conf, int argc, char *argv[])
                 free(conf->cmdline_account->from_full_name);
                 conf->cmdline_account->from_full_name = xstrdup(optarg);
                 conf->cmdline_account->mask |= ACC_FROM_FULL_NAME;
+                break;
+
+            case LONGONLYOPT_UNDISCLOSED_RECIPIENTS:
+                /* compatibility with < 1.8.29 */
+                if (!optarg || is_on(optarg))
+                {
+                    conf->cmdline_account->set_to_header = 2;
+                }
+                else if (is_off(optarg))
+                {
+                    conf->cmdline_account->set_to_header = 0;
+                }
+                else
+                {
+                    print_error(_("invalid argument %s for %s"),
+                            optarg, "--undisclosed-recipients");
+                    error_code = 1;
+                }
+                conf->cmdline_account->mask |= ACC_SET_TO_HEADER;
                 break;
 
             case LONGONLYOPT_KEEPBCC:
@@ -3729,10 +3760,14 @@ void msmtp_print_conf(msmtp_cmdline_conf_t conf, account_t *account)
         printf("set_date_header = %s\n",
                 account->set_date_header == 2 ? _("auto")
                 : _("off"));
+        printf("set_msgid_header = %s\n",
+                account->set_msgid_header == 2 ? _("auto")
+                : _("off"));
+        printf("set_to_header = %s\n",
+                account->set_to_header == 2 ? "undisclosed_recipients"
+                : account->set_to_header == 1 ? _("on") : _("off"));
         printf("remove_bcc_headers = %s\n",
                 account->remove_bcc_headers ? _("on") : _("off"));
-        printf("undisclosed_recipients = %s\n",
-                account->undisclosed_recipients ? _("on") : _("off"));
         printf("dsn_notify = %s\n",
                 account->dsn_notify ? account->dsn_notify : _("(not set)"));
         printf("dsn_return = %s\n",
@@ -3804,6 +3839,7 @@ int main(int argc, char *argv[])
     /* needed to read the headers and extract addresses */
     FILE *header_tmpfile = NULL;
     FILE *prepend_header_tmpfile = NULL;
+    char *envelope_from = NULL;
     int have_from_header = 0;
     int have_date_header = 0;
     int have_msgid_header = 0;
@@ -3874,7 +3910,6 @@ int main(int argc, char *argv[])
     /* Read recipients and/or the envelope from address from the mail. */
     if (conf.sendmail)
     {
-        char *envelope_from = NULL;
         if (!(header_tmpfile = tmpfile()))
         {
             print_error(_("cannot create temporary file: %s"),
@@ -4073,7 +4108,7 @@ int main(int argc, char *argv[])
     }
     if (conf.sendmail && account->from)
     {
-        if (expand_from(&(account->from), &errstr) != CONF_EOK)
+        if (expand_from(&(account->from), envelope_from, &errstr) != CONF_EOK)
         {
             print_error("%s", sanitize_string(errstr));
             error_code = EX_CONFIG;
@@ -4176,11 +4211,11 @@ int main(int argc, char *argv[])
     if (conf.sendmail)
     {
         int prepend_header_contains_from = 0;
-        if (account->undisclosed_recipients
-                || account->set_from_header == 1
+        if (account->set_from_header == 1
                 || (!have_from_header && account->set_from_header == 2)
                 || (!have_date_header && account->set_date_header == 2)
-                || (!have_msgid_header && account->set_msgid_header == 2))
+                || (!have_msgid_header && account->set_msgid_header == 2)
+                || account->set_to_header != 0)
         {
             if (!(prepend_header_tmpfile = tmpfile()))
             {
@@ -4206,9 +4241,22 @@ int main(int argc, char *argv[])
             }
             prepend_header_contains_from = 1;
         }
-        if (account->undisclosed_recipients)
+        if (account->set_to_header == 2)
         {
             fputs("To: undisclosed-recipients:;\n", prepend_header_tmpfile);
+        }
+        else if (account->set_to_header == 1)
+        {
+            fputs("To: ", prepend_header_tmpfile);
+            lp = conf.recipients;
+            while (!list_is_empty(lp))
+            {
+                lp = lp->next;
+                fputs(lp->data, prepend_header_tmpfile);
+                if (!list_is_empty(lp))
+                    fputs(", ", prepend_header_tmpfile);
+            }
+            fputs("\n", prepend_header_tmpfile);
         }
         if (!have_date_header && account->set_date_header == 2)
         {
@@ -4400,6 +4448,7 @@ exit:
     }
     account_free(conf.cmdline_account);
     account_free(account);
+    free(envelope_from);
     if (conf.recipients)
     {
         list_xfree(conf.recipients, free);

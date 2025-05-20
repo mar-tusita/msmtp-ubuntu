@@ -4,7 +4,7 @@
  * This file is part of msmtp, an SMTP client.
  *
  * Copyright (C) 2000, 2003, 2004, 2005, 2006, 2008, 2010, 2012, 2014, 2016,
- * 2018, 2019, 2020, 2021, 2022, 2023
+ * 2018, 2019, 2020, 2021, 2022, 2023, 2024
  * Martin Lambers <marlam@marlam.de>
  *
  *   This program is free software; you can redistribute it and/or modify
@@ -77,6 +77,7 @@
 #define SMTP_CAP_AUTH_NTLM               (1 << 16)
 #define SMTP_CAP_AUTH_XOAUTH2            (1 << 17)
 #define SMTP_CAP_ETRN                    (1 << 18)
+#define SMTP_CAP_SMTPUTF8                (1 << 19)
 
 
 /*
